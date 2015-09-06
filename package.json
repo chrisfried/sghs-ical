@@ -1,0 +1,16 @@
+{
+  "name": "sghs-ical",
+  "version": "0.0.1",
+  "description": "Generates calendars for SGHS student schedules.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Chris Fried",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^1.4.2",
+    "csv-parse": "^1.0.0",
+    "ical-generator": "^0.2.3"
+  }
+}
