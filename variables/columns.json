@@ -1,5 +1,6 @@
 {
-	"__note": "The first column is 0, not 1.",
+	"__note1": "This file tells the scripts which columns of the .csv files to check for data.",
+	"__note2": "The first column is 0, not 1.",
 	"teachers": {
 		"teacherNumber": 6,
 		"teacherName": 7,

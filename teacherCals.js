@@ -3,6 +3,11 @@ var fs = require('fs'),
 	parse = require('csv-parse'),
 	async = require('async'),
 	noSchool = require('./variables/no-school.json'),
+	partialDays = require('./variables/partial-days.json'),
+	columns = require('./variables/columns.json'),
+	year = require('./variables/year.json'),
+	periods = require('./variables/periods.json'),
+	teacherEmailAddresses = require('./variables/teacher-email-addresses.json'),
 	parsed;
 	
 String.prototype.capitalize = function(){
@@ -21,29 +26,59 @@ function excludedDateTime(dates,time) {
 	return excludedDates;
 }
 
+// Function checks if a DST change occurs between two dates.
+function dstCheck(start,end) {
+	var dstEndDate = new Date(year.dst.end),
+		dstStartDate = new Date(year.dst.start),
+		startDate = new Date(start),
+		endDate = new Date(end);
+	if ((startDate < dstEndDate && endDate > dstEndDate) && (startDate < dstStartDate && endDate > dstStartDate)) {
+		return 'both'
+	} else if (startDate < dstEndDate && endDate > dstEndDate) {
+		return 'end';
+	} else if (startDate < dstStartDate && endDate > dstStartDate) {
+		return 'start'
+	} else {
+		return null;
+	}
+}
+
+// Function adds one day to a Date object
+function addDay(date) { 
+	var nextDay = new Date(date);
+	nextDay.setDate(date.getDate()+1);
+	return nextDay;
+}
+
 // Export 'Course Data List'->'Course Sections Export' from JMC to './SectionList.csv'
-fs.readFile(__dirname + '/SectionList.csv', function (err, data) {
+fs.readFile(__dirname + '/schedules/teachers.csv', function (err, data) {
   if (err) {
     throw err; 
   }
 	parse(data.toString(), function (err, output) {
-		output.splice(0,1);
-		
 		var calendars = new Array();
 		
+		output.splice(0,1); // Remove first, header row
+		
 		async.each(output, function (line) {
-			var event, teacherNumber = line[6].toString(), name = line[7].toString().capitalize().trim();
+			var event,
+				teacherNumber = line[columns.teachers.teacherNumber].toString().trim(),
+				teacherName = line[columns.teachers.teacherName].toString().capitalize().trim(),
+				courseName = line[columns.teachers.courseName].toString().trim(),
+				period = line[columns.teachers.period].toString().trim(),
+				term = line[columns.teachers.term].toString().replace(/ /g,'').toLowerCase(),
+				roomName = line[columns.teachers.roomName].toString().capitalize().trim();
 			
 			if (!calendars[teacherNumber]) {
 			  calendars[teacherNumber] = ical({
 					domain: 'springgrove.k12.mn.us',
 					prodId: {company: 'SGHS', product: 'sghs-ical'},
-					name: name + '\'s Calendar',
+					teacherName: teacherName + '\'s Calendar',
 					timezone: 'America/Chicago',
 					// Lunch - 3 events, because DST
 					events: [{
-						start: new Date('September 8, 2015 11:38:00'),
-						end: new Date('September 8, 2015 12:08:00'),
+						start: new Date(year.year.start + ' ' + periods.lunch.start),
+						end: new Date(year.year.start + ' ' + periods.lunch.end),
 						timestamp: new Date(),
 						summary: 'Lunch',
 						location: 'Lunch Room',
@@ -53,13 +88,17 @@ fs.readFile(__dirname + '/SectionList.csv', function (err, data) {
 						},
 						repeating: {
 							freq: 'WEEKLY',
-							until: new Date('November 1, 2015 12:08:00'),
+							until: new Date(year.dst.end + ' ' + periods.lunch.end),
 							byday: ['MO','TU','WE','TH','FR'],
-							exdate: excludedDateTime(noSchool.dates, '11:38:00')
+							exdate: excludedDateTime(noSchool.dates, periods.lunch.start),
+							exrule: {
+								freq: 'WEEKLY',
+								byday: ['SU','SA']
+							}
 						}
 					},{
-						start: new Date('November 2, 2015 11:38:00'),
-						end: new Date('November 2, 2015 12:08:00'),
+						start: addDay(new Date(year.dst.end + ' ' + periods.lunch.start)),
+						end: addDay(new Date(year.dst.end + ' ' + periods.lunch.end)),
 						timestamp: new Date(),
 						summary: 'Lunch',
 						location: 'Lunch Room',
@@ -69,13 +108,17 @@ fs.readFile(__dirname + '/SectionList.csv', function (err, data) {
 						},
 						repeating: {
 							freq: 'WEEKLY',
-							until: new Date('March 13, 2016 12:08:00'),
+							until: new Date(year.dst.start + ' ' + periods.lunch.end),
 							byday: ['MO','TU','WE','TH','FR'],
-							exdate: excludedDateTime(noSchool.dates, '11:38:00')
+							exdate: excludedDateTime(noSchool.dates, periods.lunch.start),
+							exrule: {
+								freq: 'WEEKLY',
+								byday: ['SU','SA']
+							}
 						}
 					},{
-						start: new Date('March 14, 2016 11:38:00'),
-						end: new Date('March 14, 2016 12:08:00'),
+						start: addDay(new Date(year.dst.start + ' ' + periods.lunch.start)),
+						end: addDay(new Date(year.dst.start + ' ' + periods.lunch.end)),
 						timestamp: new Date(),
 						summary: 'Lunch',
 						location: 'Lunch Room',
@@ -85,9 +128,13 @@ fs.readFile(__dirname + '/SectionList.csv', function (err, data) {
 						},
 						repeating: {
 							freq: 'WEEKLY',
-							until: new Date('June 7, 2016 12:08:00'),
+							until: new Date(year.year.end + ' ' + periods.lunch.end),
 							byday: ['MO','TU','WE','TH','FR'],
-							exdate: excludedDateTime(noSchool.dates, '11:38:00')
+							exdate: excludedDateTime(noSchool.dates, periods.lunch.start),
+							exrule: {
+								freq: 'WEEKLY',
+								byday: ['SU','SA']
+							}
 						}
 					}]
 				});
@@ -103,102 +150,30 @@ fs.readFile(__dirname + '/SectionList.csv', function (err, data) {
 				});
 			}
 			
-			if (line[10]) {
-				if ((line[4] == '1' || line[4] == '2' || line[4] == '3' || line[4] == '4') && (line[3] == 'Sem 1' || line[3] == 'Sem 2' || line[3] == 'Qtr 1' || line[3] == 'Qtr 2' || line[3] == 'Qtr 3' || line[3] == 'Qtr 4')) {
+			if (courseName) {
+				if (periods[period] && year[term]) {
 					event = calendars[teacherNumber].createEvent({
 						timestamp: new Date(),
-						summary: line[10].toString(),
-						location: line[9].toString().capitalize().trim()
+						summary: courseName,
+						location: roomName
 					});
-					var startDate, endDate, startTime, endTime, endDaylight, startDaylight;
-					if (line[3] == 'Sem 1') {
-						startDate = 'September 8, 2015';
-						endDaylight = 'November 1, 2015';
-						startDaylight = 'November 2, 2015';
-						endDate = 'January 22, 2016';
-					}
-					if (line[3] == 'Qtr 1') {
-						startDate = 'September 8, 2015';
-						endDaylight = 'November 1, 2015';
-						startDaylight = 'November 2, 2015';
-						endDate = 'November 6, 2015';
-					}
-					if (line[3] == 'Qtr 2') {
-						startDate = 'November 10, 2015';
-						endDate = 'January 22, 2016';
-					}
-					if (line[3] == 'Sem 2') {
-						startDate = 'January 27, 2016';
-						endDaylight = 'March 13, 2016';
-						startDaylight = 'March 14, 2016';
-						endDate = 'June 7, 2016';
-					}
-					if (line[3] == 'Qtr 3') {
-						startDate = 'January 27, 2016';
-						endDaylight = 'March 13, 2016';
-						startDaylight = 'March 14, 2016';
-						endDate = 'April 1, 2016';
-					}
-					if (line[3] == 'Qtr 4') {
-						startDate = 'April 5, 2016';
-						endDate = 'June 7, 2016';
-					}
-					if (line[4] == '1') {
-						if (line[10].toString().indexOf("(A)") > -1) {
-							startTime = '08:30:00';
-							endTime = '09:12:00';
-						} else if (line[10].toString().indexOf("(B)") > -1) {
-							startTime = '09:14:00';
-							endTime = '09:56:00';
-						} else {
-							startTime = '08:30:00';
-							endTime = '09:56:00';
-						}
-					}
-					if (line[4] == '2') {
-						if (line[10].toString().indexOf("(A)") > -1) {
-							startTime = '10:00:00';
-							endTime = '10:30:00';
-						} else if (line[10].toString().indexOf("(B)") > -1) {
-							startTime = '10:34:00';
-							endTime = '11:04:00';
-						} else if (line[10].toString().indexOf("(C)") > -1) {
-							startTime = '11:08:00';
-							endTime = '11:38:00';
-						} else {
-							startTime = '10:00:00';
-							endTime = '11:38:00';
-						}
-					}
-					if (line[4] == '3') {
-						if (line[10].toString().indexOf("(A)") > -1) {
-							startTime = '12:12:00';
-							endTime = '12:56:00';
-						} else if (line[10].toString().indexOf("(B)") > -1) {
-							startTime = '12:58:00';
-							endTime = '13:42:00';
-						} else {
-							startTime = '12:12:00';
-							endTime = '13:42:00';
-						}
-					}
-					if (line[4] == '4') {
-						if (line[10].toString().indexOf("(A)") > -1) {
-							startTime = '13:46:00';
-							endTime = '14:29:00';
-						} else if (line[10].toString().indexOf("(B)") > -1) {
-							startTime = '14:33:00';
-							endTime = '15:16:00';
-						} else {
-							startTime = '13:46:00';
-							endTime = '15:16:00';
-						}
-					}
+					
+					var startDate, endDate, startTime, endTime, dst;
+					
+					startDate = year[term].start;
+					endDate = year[term].end;
+					
+					dst = dstCheck(startDate,endDate);
+					
+					startTime = periods[period].start;
+					endTime = periods[period].end;
+					
 					event.start(new Date(startDate + ' ' + startTime));
 					event.end(new Date(startDate + ' ' + endTime));
-					if (line[7]) {
+					
+					if (teacherName) {
 						event.organizer({
-							name: line[7].toString().capitalize().trim(),
+							name: teacherName,
 							email: 'teacher@example.com'
 						});
 					} else {
@@ -207,44 +182,116 @@ fs.readFile(__dirname + '/SectionList.csv', function (err, data) {
 							email: 'teacher@example.com'
 						});
 					}
-					if (endDaylight) {
+					
+					if (dst) { // Start DST
+						var eventEnd, event2StartStart, event2StartEnd, event2End, event3StartStart, event3StartEnd;
+						if (dst == 'both') {
+							eventEnd = new Date(year.dst.end + ' ' + endTime);
+							event2StartStart = addDay(new Date(year.dst.end + ' ' + startTime));
+							event2StartEnd = addDay(new Date(year.dst.end + ' ' + endTime));
+							event2End = new Date(year.dst.start + ' ' + endTime);
+							event3StartStart = addDay(new Date(year.dst.start + ' ' + startTime));
+							event3StartEnd = addDay(new Date(year.dst.start + ' ' + endTime));
+						} else if (dst == 'end') {
+							eventEnd = new Date(year.dst.end + ' ' + endTime);
+							event2StartStart = addDay(new Date(year.dst.end + ' ' + startTime));
+							event2StartEnd = addDay(new Date(year.dst.end + ' ' + endTime));
+						} else if (dst == 'start') {
+							eventEnd = new Date(year.dst.start + ' ' + endTime);
+							event2StartStart = addDay(new Date(year.dst.start + ' ' + startTime));
+							event2StartEnd = addDay(new Date(year.dst.start + ' ' + endTime));
+						}
+						
 						event.repeating({
 							freq: 'WEEKLY',
-							until: new Date(endDaylight + ' ' + endTime),
+							until: eventEnd,
 							byday: ['MO','TU','WE','TH','FR'],
-							exdate: excludedDateTime(noSchool.dates, startTime)
+							exdate: excludedDateTime(noSchool.dates, startTime),
+							exrule: {
+								freq: 'WEEKLY',
+								byday: ['SU','SA']
+							}
 						});
 						
-						// Copy event for DST switch
-						var event2 = calendars[teacherNumber].createEvent({
-							timestamp: event.timestamp(),
-							summary: event.summary(),
-							location: event.location(),
-							organizer: event.organizer()
-						});
-						event2.start(new Date(startDaylight + ' ' + startTime));
-						event2.end(new Date(startDaylight + ' ' + endTime));
-						event2.repeating({
-							freq: 'WEEKLY',
-							until: new Date(endDate + ' ' + endTime),
-							byday: ['MO','TU','WE','TH','FR'],
-							exdate: excludedDateTime(noSchool.dates, startTime)
-						});
-					}
+						if (event2End) {
+							var event2 = calendars[teacherNumber].createEvent({
+								timestamp: event.timestamp(),
+								summary: event.summary(),
+								location: event.location(),
+								organizer: event.organizer()
+							});
+							event2.start(event2StartStart);
+							event2.end(event2StartEnd);
+							event2.repeating({
+								freq: 'WEEKLY',
+								until: event2End,
+								byday: ['MO','TU','WE','TH','FR'],
+								exdate: excludedDateTime(noSchool.dates, startTime),
+								exrule: {
+									freq: 'WEEKLY',
+									byday: ['SU','SA']
+								}
+							});
+							
+							var event3 = calendars[teacherNumber].createEvent({
+								timestamp: event.timestamp(),
+								summary: event.summary(),
+								location: event.location(),
+								organizer: event.organizer()
+							});
+							event3.start(event3StartStart);
+							event3.end(event3StartEnd);
+							event3.repeating({
+								freq: 'WEEKLY',
+								until: new Date(endDate + ' ' + endTime),
+								byday: ['MO','TU','WE','TH','FR'],
+								exdate: excludedDateTime(noSchool.dates, startTime),
+								exrule: {
+									freq: 'WEEKLY',
+									byday: ['SU','SA']
+								}
+							});
+						} else {
+							var event2 = calendars[teacherNumber].createEvent({
+								timestamp: event.timestamp(),
+								summary: event.summary(),
+								location: event.location(),
+								organizer: event.organizer()
+							});
+							event2.start(event2StartStart);
+							event2.end(event2StartEnd);
+							event2.repeating({
+								freq: 'WEEKLY',
+								until: new Date(endDate + ' ' + endTime),
+								byday: ['MO','TU','WE','TH','FR'],
+								exdate: excludedDateTime(noSchool.dates, startTime),
+								exrule: {
+									freq: 'WEEKLY',
+									byday: ['SU','SA']
+								}
+							});
+						}
+					} // End DST
 					
 					else {
 						event.repeating({
 							freq: 'WEEKLY',
 							until: new Date(endDate + ' ' + endTime),
 							byday: ['MO','TU','WE','TH','FR'],
-							exdate: excludedDateTime(noSchool.dates, startTime)
+							exdate: excludedDateTime(noSchool.dates, startTime),
+							exrule: {
+								freq: 'WEEKLY',
+								byday: ['SU','SA']
+							}
 						});
 					}
 				} else {
-					console.log('invalid period or term: ' + line[0]);
+					console.log('invalid period or term, teacher ' + teacherNumber);
 				}
+			} else {
+				console.log('invalid course name, teacher ' + teacherNumber);
 			}
-			calendars[teacherNumber].save('teacherCalendars/' + teacherNumber + ' ' + name + '.ics');
+			calendars[teacherNumber].save('teacherCalendars/' + teacherNumber + ' ' + teacherName + '.ics');
 		}, function (err) {
 			if( err ) {
 				console.log('A file failed to process');
