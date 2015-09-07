@@ -1,0 +1,26 @@
+{
+	"__note": "The first column is 0, not 1.",
+	"teachers": {
+		"teacherNumber": 6,
+		"teacherName": 7,
+		"courseNumber": 1,
+		"sectionNumber": 2,
+		"courseName": 10,
+		"period": 4,
+		"term": 3,
+		"roomName": 9
+	},
+	"students": {
+		"studentId": 3,
+		"studentFirstName": 1,
+		"studentLastName": 0,
+		"teacherNumber": 11,
+		"teacherName": 12,
+		"courseNumber": 7,
+		"sectionNumber": 9,
+		"courseName": 8,
+		"period": 6,
+		"term": 5,
+		"roomName": 14
+	}
+}
