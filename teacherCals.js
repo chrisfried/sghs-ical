@@ -7,6 +7,7 @@ var fs = require('fs'),
 	columns = require('./variables/columns.json'),
 	year = require('./variables/year.json'),
 	periods = require('./variables/periods.json'),
+	splits = require('./variables/splits.json'),
 	teacherEmailAddresses = require('./variables/teacher-email-addresses.json'),
 	parsed;
 	
@@ -65,6 +66,8 @@ fs.readFile(__dirname + '/schedules/teachers.csv', function (err, data) {
 				teacherNumber = line[columns.teachers.teacherNumber].toString().trim(),
 				teacherName = line[columns.teachers.teacherName].toString().capitalize().trim(),
 				courseName = line[columns.teachers.courseName].toString().trim(),
+				courseNumber = line[columns.teachers.courseNumber].toString().trim(),
+				sectionNumber = line[columns.teachers.sectionNumber].toString().trim(),
 				period = line[columns.teachers.period].toString().trim(),
 				term = line[columns.teachers.term].toString().replace(/ /g,'').toLowerCase(),
 				roomName = line[columns.teachers.roomName].toString().capitalize().trim();
@@ -165,8 +168,16 @@ fs.readFile(__dirname + '/schedules/teachers.csv', function (err, data) {
 					
 					dst = dstCheck(startDate,endDate);
 					
-					startTime = periods[period].start;
-					endTime = periods[period].end;
+					if (splits[courseNumber]) {
+						var split;
+						if (split = splits[courseNumber][sectionNumber]) {
+							startTime = periods[period].splits[split].start;
+							endTime = periods[period].splits[split].end;
+						}
+					} else {
+						startTime = periods[period].start;
+						endTime = periods[period].end;
+					}
 					
 					event.start(new Date(startDate + ' ' + startTime));
 					event.end(new Date(startDate + ' ' + endTime));
@@ -291,7 +302,11 @@ fs.readFile(__dirname + '/schedules/teachers.csv', function (err, data) {
 			} else {
 				console.log('invalid course name, teacher ' + teacherNumber);
 			}
-			calendars[teacherNumber].save('teacherCalendars/' + teacherNumber + ' ' + teacherName + '.ics');
+			calendars[teacherNumber].save('teacherCalendars/' + teacherNumber + ' ' + teacherName + '.ics', function(err) {
+				if( err ) {
+					console.log('failed to save teacherCalendars/' + teacherNumber + ' ' + teacherName + '.ics');
+				}
+			});
 		}, function (err) {
 			if( err ) {
 				console.log('A file failed to process');

@@ -7,6 +7,7 @@ var fs = require('fs'),
 	columns = require('./variables/columns.json'),
 	year = require('./variables/year.json'),
 	periods = require('./variables/periods.json'),
+	splits = require('./variables/splits.json'),
 	teacherEmailAddresses = require('./variables/teacher-email-addresses.json'),
 	parsed;
 	
@@ -26,6 +27,7 @@ function excludedDateTime(dates,time) {
 	return excludedDates;
 }
 
+// Function checks if a DST change occurs between two dates.
 function dstCheck(start,end) {
 	var dstEndDate = new Date(year.dst.end),
 		dstStartDate = new Date(year.dst.start),
@@ -42,7 +44,8 @@ function dstCheck(start,end) {
 	}
 }
 
-function addDay(date) { // date must be a Date object
+// Function adds one day to a Date object
+function addDay(date) { 
 	var nextDay = new Date(date);
 	nextDay.setDate(date.getDate()+1);
 	return nextDay;
@@ -54,17 +57,22 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
     throw err; 
   }
 	parse(data.toString(), function (err, output) {
-		var calendars = [];
+		var calendars = new Array();
+		
 		output.splice(0,1); // Remove first, header row
+		
 		async.each(output, function (line) {
 			var event, 
 				studentId = line[columns.students.studentId].toString().trim(), 
 				studentName = line[columns.students.studentFirstName].toString().capitalize().trim() + ' ' + line[columns.students.studentLastName].toString().capitalize().trim(),
 				courseName = line[columns.students.courseName].toString().trim(),
+				courseNumber = line[columns.students.courseNumber].toString().trim(),
+				sectionNumber = line[columns.students.sectionNumber].toString().trim(),
 				period = line[columns.students.period].toString().trim(),
 				term = line[columns.students.term].toString().replace(/ /g,'').toLowerCase(),
 				teacherName = line[columns.students.teacherName].toString().capitalize().trim(),
 				roomName = line[columns.students.roomName].toString().capitalize().trim();
+			
 			if (!calendars[studentId]) {
 				calendars[studentId] = ical({
 					domain: 'springgrove.k12.mn.us',
@@ -161,11 +169,20 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
 					
 					dst = dstCheck(startDate,endDate);
 					
-					startTime = periods[period].start;
-					endTime = periods[period].end;
+					if (splits[courseNumber]) {
+						var split;
+						if (split = splits[courseNumber][sectionNumber]) {
+							startTime = periods[period].splits[split].start;
+							endTime = periods[period].splits[split].end;
+						}
+					} else {
+						startTime = periods[period].start;
+						endTime = periods[period].end;
+					}
 					
 					event.start(new Date(startDate + ' ' + startTime));
 					event.end(new Date(startDate + ' ' + endTime));
+					
 					if (teacherName) {
 						event.organizer({
 							name: teacherName,
@@ -286,7 +303,11 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
 			} else {
 				console.log('invalid course name, student ' + studentId);
 			}
-			calendars[studentId].save('studentCalendars/' + studentId + ' ' + studentName + '.ics');
+			calendars[studentId].save('studentCalendars/' + studentId + ' ' + studentName + '.ics', function(err) {
+				if( err ) {
+					console.log('failed to save studentCalendars/' + studentId + ' ' + studentName + '.ics');
+				}
+			});
 		}, function (err) {
 			if( err ) {
 				console.log('A file failed to process');
