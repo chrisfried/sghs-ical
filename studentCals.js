@@ -94,11 +94,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
               freq: 'WEEKLY',
               until: new Date(year.dst.end + ' ' + periods.lunch.end),
               byday: ['MO','TU','WE','TH','FR'],
-              exdate: excludedDateTime(noSchool.dates, periods.lunch.start),
-              exrule: {
-                freq: 'WEEKLY',
-                byday: ['SU','SA']
-              }
+              exdate: excludedDateTime(noSchool.dates, periods.lunch.start)
             }
           },{
             start: addDay(new Date(year.dst.end + ' ' + periods.lunch.start)),
@@ -114,11 +110,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
               freq: 'WEEKLY',
               until: new Date(year.dst.start + ' ' + periods.lunch.end),
               byday: ['MO','TU','WE','TH','FR'],
-              exdate: excludedDateTime(noSchool.dates, periods.lunch.start),
-              exrule: {
-                freq: 'WEEKLY',
-                byday: ['SU','SA']
-              }
+              exdate: excludedDateTime(noSchool.dates, periods.lunch.start)
             }
           },{
             start: addDay(new Date(year.dst.start + ' ' + periods.lunch.start)),
@@ -134,11 +126,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
               freq: 'WEEKLY',
               until: new Date(year.year.end + ' ' + periods.lunch.end),
               byday: ['MO','TU','WE','TH','FR'],
-              exdate: excludedDateTime(noSchool.dates, periods.lunch.start),
-              exrule: {
-                freq: 'WEEKLY',
-                byday: ['SU','SA']
-              }
+              exdate: excludedDateTime(noSchool.dates, periods.lunch.start)
             }
           }]
         });
@@ -218,11 +206,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
               freq: 'WEEKLY',
               until: eventEnd,
               byday: ['MO','TU','WE','TH','FR'],
-              exdate: excludedDateTime(noSchool.dates, startTime),
-              exrule: {
-                freq: 'WEEKLY',
-                byday: ['SU','SA']
-              }
+              exdate: excludedDateTime(noSchool.dates, startTime)
             });
             
             if (event2End) {
@@ -238,11 +222,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
                 freq: 'WEEKLY',
                 until: event2End,
                 byday: ['MO','TU','WE','TH','FR'],
-                exdate: excludedDateTime(noSchool.dates, startTime),
-                exrule: {
-                  freq: 'WEEKLY',
-                  byday: ['SU','SA']
-                }
+                exdate: excludedDateTime(noSchool.dates, startTime)
               });
               
               var event3 = calendars[studentId].createEvent({
@@ -257,11 +237,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
                 freq: 'WEEKLY',
                 until: new Date(endDate + ' ' + endTime),
                 byday: ['MO','TU','WE','TH','FR'],
-                exdate: excludedDateTime(noSchool.dates, startTime),
-                exrule: {
-                  freq: 'WEEKLY',
-                  byday: ['SU','SA']
-                }
+                exdate: excludedDateTime(noSchool.dates, startTime)
               });
             } else {
               var event2 = calendars[studentId].createEvent({
@@ -276,11 +252,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
                 freq: 'WEEKLY',
                 until: new Date(endDate + ' ' + endTime),
                 byday: ['MO','TU','WE','TH','FR'],
-                exdate: excludedDateTime(noSchool.dates, startTime),
-                exrule: {
-                  freq: 'WEEKLY',
-                  byday: ['SU','SA']
-                }
+                exdate: excludedDateTime(noSchool.dates, startTime)
               });
             }
           } // End DST
@@ -290,11 +262,7 @@ fs.readFile(__dirname + '/schedules/students.csv', function (err, data) {
               freq: 'WEEKLY',
               until: new Date(endDate + ' ' + endTime),
               byday: ['MO','TU','WE','TH','FR'],
-              exdate: excludedDateTime(noSchool.dates, startTime),
-              exrule: {
-                freq: 'WEEKLY',
-                byday: ['SU','SA']
-              }
+              exdate: excludedDateTime(noSchool.dates, startTime)
             });
           }
         } else {
